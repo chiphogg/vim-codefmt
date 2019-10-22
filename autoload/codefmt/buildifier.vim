@@ -39,11 +39,9 @@ function! codefmt#buildifier#GetFormatter() abort
   " @flag(buildifier)
   " @throws ShellError
   function l:formatter.Format() abort
-    let l:cmd = [ s:plugin.Flag('buildifier_executable') ]
-    let l:fname = expand('%:p')
-    if !empty(l:fname)
-      let l:cmd += ['-path', l:fname]
-    endif
+    let l:cmd = [
+        \ s:plugin.Flag('buildifier_executable'),
+        \ '--type='.s:BuildifierFileType()]
 
     let l:input = join(getline(1, line('$')), "\n")
     try
@@ -54,6 +52,7 @@ function! codefmt#buildifier#GetFormatter() abort
       " Parse all the errors and stick them in the quickfix list.
       let l:errors = []
       for line in split(v:exception, "\n")
+        let l:fname = expand('%:p')
         if empty(l:fname)
           let l:fname_pattern = 'stdin'
         else
@@ -81,4 +80,27 @@ function! codefmt#buildifier#GetFormatter() abort
   endfunction
 
   return l:formatter
+endfunction
+
+
+""
+" @private
+"
+" The type of skylark file to format.
+function! s:BuildifierFileType() abort
+  let l:fname = maktaba#path#Basename(expand('%:p'))
+
+  if maktaba#string#StartsWith(l:fname, 'BUILD')
+    return 'build'
+  endif
+
+  if maktaba#string#StartsWith(l:fname, 'WORKSPACE')
+    return 'workspace'
+  endif
+
+  if maktaba#string#EndsWith(l:fname, '.bzl')
+    return 'bzl'
+  endif
+
+  return 'auto'
 endfunction
